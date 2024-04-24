@@ -10,8 +10,6 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel as DDP
-from data.coco_dataset import CocoDatasetKarpathy
-from data.coco_dataloader import CocoDataLoader
 from test import compute_evaluation_loss, evaluate_model_on_set
 from losses.loss import LabelSmoothingLoss
 from losses.reward import ReinforceCiderReward
@@ -19,6 +17,9 @@ from optims.radam import RAdam
 from utils import language_utils
 from utils.args_utils import str2bool, str2list, scheduler_type_choice, optim_type_choice
 from utils.saving_utils import load_most_recent_checkpoint, save_last_checkpoint, partially_load_state_dict
+
+from data.custom_dataloader import CustomDataLoader
+from data.custom_dataset import CustomDataset
 
 torch.autograd.set_detect_anomaly(False)
 torch.set_num_threads(1)
@@ -36,7 +37,7 @@ def train(rank,
           train_args,
           path_args,
           ddp_model,
-          coco_dataset, data_loader,
+          custom_dataset, data_loader,
           optimizer, sched,
           max_len,
           ddp_sync_port):
@@ -50,8 +51,8 @@ def train(rank,
         running_reward = 0
         running_reward_base = 0
 
-        training_references = coco_dataset.get_all_images_captions(CocoDatasetKarpathy.TrainSet_ID)
-        reinforce_reward = ReinforceCiderReward(training_references, coco_dataset.get_eos_token_str(),
+        training_references = custom_dataset.get_all_images_captions(CustomDataset.TrainSet_ID)
+        reinforce_reward = ReinforceCiderReward(training_references, custom_dataset.get_eos_token_str(),
                                                 num_sampled_captions, rank)
 
     algorithm_start_time = time()
@@ -82,7 +83,7 @@ def train(rank,
                                       dec_x_num_pads=batch_target_y_num_pads,
                                       apply_softmax=False)
 
-            loss = loss_function(pred_logprobs, batch_target_y[:, 1:], coco_dataset.get_pad_token_idx())
+            loss = loss_function(pred_logprobs, batch_target_y[:, 1:], custom_dataset.get_pad_token_idx())
 
             running_loss += loss.item()
             loss.backward()
@@ -95,14 +96,14 @@ def train(rank,
             batch_input_x = batch_input_x.to(rank)
             sampling_search_kwargs = {'sample_max_seq_len': train_args.scst_max_len,
                                       'how_many_outputs': num_sampled_captions,
-                                      'sos_idx': coco_dataset.get_sos_token_idx(),
-                                      'eos_idx': coco_dataset.get_eos_token_idx()}
+                                      'sos_idx': custom_dataset.get_sos_token_idx(),
+                                      'eos_idx': custom_dataset.get_eos_token_idx()}
             all_images_pred_idx, all_images_logprob = ddp_model(enc_x=batch_input_x,
                                                                 enc_x_num_pads=batch_input_x_num_pads,
                                                                 mode='sampling', **sampling_search_kwargs)
 
             all_images_pred_caption = [language_utils.convert_allsentences_idx2word(
-                one_image_pred_idx, coco_dataset.caption_idx2word_list) \
+                one_image_pred_idx, custom_dataset.caption_idx2word_list) \
                 for one_image_pred_idx in all_images_pred_idx]
 
             reward_loss, reward, reward_base \
@@ -164,17 +165,17 @@ def train(rank,
 
         if ((it + 1) % data_loader.get_num_batches() == 0) or ((it + 1) % train_args.eval_every_iter == 0):
             if not train_args.reinforce:
-                compute_evaluation_loss(loss_function, ddp_model, coco_dataset, data_loader,
-                                        coco_dataset.val_num_images, sub_batch_size=train_args.eval_parallel_batch_size,
-                                        dataset_split=CocoDatasetKarpathy.ValidationSet_ID,
+                compute_evaluation_loss(loss_function, ddp_model, custom_dataset, data_loader,
+                                        custom_dataset.val_num_images, sub_batch_size=train_args.eval_parallel_batch_size,
+                                        dataset_split=CustomDataset.ValidationSet_ID,
                                         rank=rank, verbose=True)
 
             if rank == 0:
                 print("Evaluation on Validation Set")
-            evaluate_model_on_set(ddp_model, coco_dataset.caption_idx2word_list,
-                                  coco_dataset.get_sos_token_idx(), coco_dataset.get_eos_token_idx(),
-                                  coco_dataset.val_num_images, data_loader,
-                                  CocoDatasetKarpathy.ValidationSet_ID, max_len,
+            evaluate_model_on_set(ddp_model, custom_dataset.caption_idx2word_list,
+                                  custom_dataset.get_sos_token_idx(), custom_dataset.get_eos_token_idx(),
+                                  custom_dataset.val_num_images, data_loader,
+                                  CustomDataset.ValidationSet_ID, max_len,
                                   rank, ddp_sync_port,
                                   parallel_batches=train_args.eval_parallel_batch_size,
                                   use_images_instead_of_features=train_args.is_end_to_end,
@@ -198,7 +199,7 @@ def distributed_train(rank,
                       world_size,
                       model_args,
                       optim_args,
-                      coco_dataset,
+                      custom_dataset,
                       array_of_init_seeds,
                       model_max_len,
                       train_args,
@@ -225,8 +226,8 @@ def distributed_train(rank,
                                     N_dec=model_args.N_dec, num_heads=8, ff=2048,
                                     num_exp_enc_list=[32, 64, 128, 256, 512],
                                     num_exp_dec=16,
-                                    output_word2idx=coco_dataset.caption_word2idx_dict,
-                                    output_idx2word=coco_dataset.caption_idx2word_list,
+                                    output_word2idx=custom_dataset.caption_word2idx_dict,
+                                    output_idx2word=custom_dataset.caption_idx2word_list,
                                     max_seq_len=model_max_len, drop_args=model_args.drop_args,
                                     rank=rank)
     else:
@@ -235,8 +236,8 @@ def distributed_train(rank,
                                 N_dec=model_args.N_dec, num_heads=8, ff=2048,
                                 num_exp_enc_list=[32, 64, 128, 256, 512],
                                 num_exp_dec=16,
-                                output_word2idx=coco_dataset.caption_word2idx_dict,
-                                output_idx2word=coco_dataset.caption_idx2word_list,
+                                output_word2idx=custom_dataset.caption_word2idx_dict,
+                                output_idx2word=custom_dataset.caption_idx2word_list,
                                 max_seq_len=model_max_len, drop_args=model_args.drop_args,
                                 img_feature_dim=1536,
                                 rank=rank)
@@ -247,7 +248,7 @@ def distributed_train(rank,
 
     if train_args.reinforce:
         print("Reinforcement learning Mode")
-        data_loader = CocoDataLoader(coco_dataset=coco_dataset,
+        data_loader = CustomDataLoader(custom_dataset=custom_dataset,
                                      batch_size=train_args.batch_size,
                                      num_procs=world_size,
                                      array_of_init_seeds=array_of_init_seeds,
@@ -257,7 +258,7 @@ def distributed_train(rank,
                                      verbose=True)
     else:
         print("Cross Entropy learning mode")
-        data_loader = CocoDataLoader(coco_dataset=coco_dataset,
+        data_loader = CustomDataLoader(custom_dataset=custom_dataset,
                                      batch_size=train_args.batch_size,
                                      num_procs=world_size,
                                      array_of_init_seeds=array_of_init_seeds,
@@ -336,7 +337,7 @@ def distributed_train(rank,
           train_args,
           path_args,
           ddp_model,
-          coco_dataset, data_loader,
+          custom_dataset, data_loader,
           optimizer, sched,
           model_max_len if not train_args.reinforce else train_args.scst_max_len,
           train_args.ddp_sync_port)
@@ -347,14 +348,14 @@ def distributed_train(rank,
 
 def spawn_train_processes(model_args,
                           optim_args,
-                          coco_dataset,
+                          custom_dataset,
                           train_args,
                           path_args
                           ):
 
-    max_sequence_length = coco_dataset.max_seq_len + 20
+    max_sequence_length = custom_dataset.max_seq_len + 20
     print("Max sequence length: " + str(max_sequence_length))
-    print("y vocabulary size: " + str(len(coco_dataset.caption_word2idx_dict)))
+    print("y vocabulary size: " + str(len(custom_dataset.caption_word2idx_dict)))
 
     world_size = torch.cuda.device_count()
     print("Using - ", world_size, " processes / GPUs!")
@@ -366,7 +367,7 @@ def spawn_train_processes(model_args,
              args=(train_args.num_gpus,
                    model_args,
                    optim_args,
-                   coco_dataset,
+                   custom_dataset,
                    array_of_init_seeds,
                    max_sequence_length,
                    train_args,
@@ -490,18 +491,15 @@ if __name__ == "__main__":
     print("save_path: " + str(args.save_path))
     print("num_gpus: " + str(args.num_gpus))
 
-    coco_dataset = CocoDatasetKarpathy(
-        images_path=path_args.images_path,
-        coco_annotations_path=path_args.captions_path + "dataset_coco.json",
-        preproc_images_hdf5_filepath=path_args.preproc_images_hdf5_filepath if train_args.is_end_to_end else None,
-        precalc_features_hdf5_filepath=None if train_args.is_end_to_end else path_args.features_path,
-        limited_num_train_images=None,
-        limited_num_val_images=5000)
+    custom_dataset = CustomDataset(images_path=your_image_path,
+                                 annotations_path=your_json_annotations_path,
+                                 preproc_images_hdf5_filepath=path_args.preproc_images_hdf5_filepath if train_args.is_end_to_end else None,
+                                 precalc_features_hdf5_filepath=None if train_args.is_end_to_end else path_args.features_path)
 
     # train base model
     spawn_train_processes(model_args=model_args,
                           optim_args=optim_args,
-                          coco_dataset=coco_dataset,
+                          custom_dataset=custom_dataset,
                           train_args=train_args,
                           path_args=path_args
                           )

@@ -8,7 +8,8 @@ from argparse import Namespace
 from torch.nn.parameter import Parameter
 from time import time
 
-from data.coco_dataset import CocoDatasetKarpathy
+from data.custom_dataset import CustomDataset
+from data.custom_dataset import CustomDataset
 
 torch.autograd.set_detect_anomaly(False)
 torch.set_num_threads(1)
@@ -25,14 +26,10 @@ def convert_time_as_hhmmss(ticks):
 
 def generate_data(path_args):
 
-    coco_dataset = CocoDatasetKarpathy(images_path=path_args.images_path,
-                                       coco_annotations_path=args.captions_path + "dataset_coco.json",
-                                       train2014_bboxes_path=args.captions_path + "train2014_instances.json",
-                                       val2014_bboxes_path=args.captions_path + "val2014_instances.json",
-                                       preproc_images_hdf5_filepath=None,
-                                       precalc_features_hdf5_filepath=None,
-                                       limited_num_train_images=None,
-                                       limited_num_val_images=5000)
+    custom_dataset = CustomDataset(images_path=your_image_path,
+                                 annotations_path=your_annotations_json_path,
+                                 preproc_images_hdf5_filepath=None,
+                                 precalc_features_hdf5_filepath=None)
 
     from models.swin_transformer_mod import SwinTransformer
     model = SwinTransformer(
@@ -90,27 +87,27 @@ def generate_data(path_args):
             output = model(tens_image.unsqueeze(0))
             return output.squeeze(0)
 
-        for i in range(coco_dataset.train_num_images):
-           img_path, img_id = coco_dataset.get_image_path(coco_dataset.train_num_images - i - 1,
-                                                          CocoDatasetKarpathy.TrainSet_ID)
+        for i in range(custom_dataset.train_num_images):
+           img_path, img_id = custom_dataset.get_image_path(custom_dataset.train_num_images - i - 1,
+                                                          CustomDataset.TrainSet_ID)
            output = apply_model(model, img_path)
            hdf5_file.create_dataset(str(img_id) + '_features', data=np.array(output.cpu()))
-           if (i+1) % 5000 == 0 or (i+1) == coco_dataset.train_num_images:
-               print("Train " + str(i+1) + " / " + str(coco_dataset.train_num_images) + " completed")
+           if (i+1) % 5000 == 0 or (i+1) == custom_dataset.train_num_images:
+               print("Train " + str(i+1) + " / " + str(custom_dataset.train_num_images) + " completed")
 
-        for i in range(coco_dataset.test_num_images):
-            img_path, img_id = coco_dataset.get_image_path(i, CocoDatasetKarpathy.TestSet_ID)
+        for i in range(custom_dataset.test_num_images):
+            img_path, img_id = custom_dataset.get_image_path(i, CustomDataset.TestSet_ID)
             output = apply_model(model, img_path)
             hdf5_file.create_dataset(str(img_id) + '_features', data=np.array(output.cpu()))
-            if (i+1) % 2500 == 0 or (i+1) == coco_dataset.test_num_images:
-                print("Test " + str(i+1) + " / " + str(coco_dataset.test_num_images) + " completed")
+            if (i+1) % 2500 == 0 or (i+1) == custom_dataset.test_num_images:
+                print("Test " + str(i+1) + " / " + str(custom_dataset.test_num_images) + " completed")
 
-        for i in range(coco_dataset.val_num_images):
-            img_path, img_id = coco_dataset.get_image_path(i, CocoDatasetKarpathy.ValidationSet_ID)
+        for i in range(custom_dataset.val_num_images):
+            img_path, img_id = custom_dataset.get_image_path(i, CustomDataset.ValidationSet_ID)
             output = apply_model(model, img_path)
             hdf5_file.create_dataset(str(img_id) + '_features', data=np.array(output.cpu()))
-            if (i+1) % 2500 == 0 or (i+1) == coco_dataset.test_num_images:
-                print("Val " + str(i+1) + " / " + str(coco_dataset.test_num_images) + " completed")
+            if (i+1) % 2500 == 0 or (i+1) == custom_dataset.test_num_images:
+                print("Val " + str(i+1) + " / " + str(custom_dataset.test_num_images) + " completed")
 
     print("[GPU: " + str(DEFAULT_RANK) + " ] Closing...")
 

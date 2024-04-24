@@ -1,5 +1,5 @@
 import re
-
+from pythainlp.tokenize import word_tokenize
 
 def compute_num_pads(list_bboxes):
     max_len = -1
@@ -36,7 +36,7 @@ def add_space_between_non_alphanumeric_symbols(sentences):
 def tokenize(list_sentences):
     res_sentences_list = []
     for i in range(len(list_sentences)):
-        sentence = list_sentences[i].split(' ')
+        sentence = word_tokenize(list_sentences[i], engine='newmm') # Tokenize with Newmm
         while '' in sentence:
             sentence.remove('')
         res_sentences_list.append(sentence)
