@@ -78,7 +78,7 @@ def generate_data(path_args):
         hdf5_file = h5py.File(path_args.output_path, 'w')
 
         def apply_model(model, file_path):
-            pil_image = PIL_Image.open(file_path)
+            pil_image = PIL_Image.open(file_path + ".jpg")
             if pil_image.mode != 'RGB':
                 pil_image = PIL_Image.new("RGB", pil_image.size)
             preprocess_pil_image = test_preprocess_1(pil_image)
@@ -109,6 +109,8 @@ def generate_data(path_args):
             if (i+1) % 2500 == 0 or (i+1) == custom_dataset.test_num_images:
                 print("Val " + str(i+1) + " / " + str(custom_dataset.test_num_images) + " completed")
 
+        hdf5_file.close()
+
     print("[GPU: " + str(DEFAULT_RANK) + " ] Closing...")
 
 
@@ -128,7 +130,7 @@ if __name__ == "__main__":
                           captions_path=args.captions_path)
     
     print("CHECK")
-    
+
     generate_data(path_args=path_args)
 
 

@@ -248,7 +248,7 @@ def distributed_train(rank,
 
     if train_args.reinforce:
         print("Reinforcement learning Mode")
-        data_loader = CustomDataLoader(custom_dataset=custom_dataset,
+        data_loader = CustomDataLoader(YOUR_CUSTOM_DATASET=custom_dataset,
                                      batch_size=train_args.batch_size,
                                      num_procs=world_size,
                                      array_of_init_seeds=array_of_init_seeds,
@@ -258,7 +258,7 @@ def distributed_train(rank,
                                      verbose=True)
     else:
         print("Cross Entropy learning mode")
-        data_loader = CustomDataLoader(custom_dataset=custom_dataset,
+        data_loader = CustomDataLoader(YOUR_CUSTOM_DATASET=custom_dataset,
                                      batch_size=train_args.batch_size,
                                      num_procs=world_size,
                                      array_of_init_seeds=array_of_init_seeds,
@@ -491,8 +491,8 @@ if __name__ == "__main__":
     print("save_path: " + str(args.save_path))
     print("num_gpus: " + str(args.num_gpus))
 
-    custom_dataset = CustomDataset(images_path=your_image_path,
-                                 annotations_path=your_json_annotations_path,
+    custom_dataset = CustomDataset(images_path=path_args.images_path,
+                                 annotations_path=path_args.captions_path,
                                  preproc_images_hdf5_filepath=path_args.preproc_images_hdf5_filepath if train_args.is_end_to_end else None,
                                  precalc_features_hdf5_filepath=None if train_args.is_end_to_end else path_args.features_path)
 
