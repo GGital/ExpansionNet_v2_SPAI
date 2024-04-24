@@ -126,6 +126,9 @@ if __name__ == "__main__":
                           output_path=args.output_path,
                           images_path=args.images_path,
                           captions_path=args.captions_path)
+    
+    print("CHECK")
+    
     generate_data(path_args=path_args)
 
 
