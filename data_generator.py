@@ -26,8 +26,8 @@ def convert_time_as_hhmmss(ticks):
 
 def generate_data(path_args):
 
-    custom_dataset = CustomDataset(images_path=your_image_path,
-                                 annotations_path=your_annotations_json_path,
+    custom_dataset = CustomDataset(images_path=path_args.images_path,
+                                 annotations_path=path_args.captions_path,
                                  preproc_images_hdf5_filepath=None,
                                  precalc_features_hdf5_filepath=None)
 
