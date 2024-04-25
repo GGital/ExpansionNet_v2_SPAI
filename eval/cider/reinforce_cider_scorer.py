@@ -10,7 +10,7 @@ from collections import defaultdict
 import numpy as np
 import pdb
 import math
-
+from utils import tokenize
 
 def precook(s, n=4, out=False):
     """
@@ -21,7 +21,7 @@ def precook(s, n=4, out=False):
     :param n: int    : number of ngrams for which representation is calculated
     :return: term frequency vector for occuring ngrams
     """
-    words = s.split()
+    words = tokenize(s)
     counts = defaultdict(int)
     for k in range(1, n + 1):
         for i in range(len(words) - k + 1):

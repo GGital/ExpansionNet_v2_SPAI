@@ -310,36 +310,36 @@ def test(rank, world_size,
         ddp_model = get_ensemble_model(model, checkpoints_list, rank=rank)
 
     print("Evaluation on Validation Set")
-    evaluate_model_on_set(ddp_model, coco_dataset.caption_idx2word_list,
-                          coco_dataset.get_sos_token_idx(), coco_dataset.get_eos_token_idx(),
-                          coco_dataset.val_num_images,
-                          data_loader,
-                          CocoDatasetKarpathy.ValidationSet_ID, model_max_len,
-                          rank, ddp_sync_port,
-                          parallel_batches=eval_parallel_batch_size,
-                          use_images_instead_of_features=is_end_to_end,
-                          beam_sizes=eval_beam_sizes)
+    #evaluate_model_on_set(ddp_model, coco_dataset.caption_idx2word_list,
+    #                      coco_dataset.get_sos_token_idx(), coco_dataset.get_eos_token_idx(),
+    #                      coco_dataset.val_num_images,
+    #                      data_loader,
+    #                      CocoDatasetKarpathy.ValidationSet_ID, model_max_len,
+    #                      rank, ddp_sync_port,
+    #                      parallel_batches=eval_parallel_batch_size,
+    #                      use_images_instead_of_features=is_end_to_end,
+    #                      beam_sizes=eval_beam_sizes)
 
     print("Evaluation on Test Set")
-    pred_dict, gts_dict = evaluate_model_on_set(ddp_model, coco_dataset.caption_idx2word_list,
-                                                coco_dataset.get_sos_token_idx(), coco_dataset.get_eos_token_idx(),
-                                                coco_dataset.test_num_images,
-                                                data_loader,
-                                                CocoDatasetKarpathy.TestSet_ID, model_max_len,
-                                                rank, ddp_sync_port,
-                                                parallel_batches=eval_parallel_batch_size,
-                                                use_images_instead_of_features=is_end_to_end,
-                                                beam_sizes=eval_beam_sizes,
-                                                get_predictions=show_predictions)
+    #pred_dict, gts_dict = evaluate_model_on_set(ddp_model, coco_dataset.caption_idx2word_list,
+     #                                           coco_dataset.get_sos_token_idx(), coco_dataset.get_eos_token_idx(),
+    #                                            coco_dataset.test_num_images,
+    #                                            data_loader,
+    #                                            CocoDatasetKarpathy.TestSet_ID, model_max_len,
+    #                                            rank, ddp_sync_port,
+    #                                            parallel_batches=eval_parallel_batch_size,
+    #                                            use_images_instead_of_features=is_end_to_end,
+    #                                            beam_sizes=eval_beam_sizes,
+    #                                            get_predictions=show_predictions)
 
-    if rank == 0 and show_predictions:
-        with open("predictions.txt", 'w') as f:
-            for i in range(len(pred_dict)):
-                prediction = pred_dict[i][0]['caption']
-                ground_truth_list = [gts_dict[i][j]['caption'] for j in range(len(gts_dict[i]))]
-                f.write(str(i) + '----------------------------------------------------------------------' + '\n')
-                f.write('Pred: ' + str(prediction) + '\n')
-                f.write('Gt: ' + str(ground_truth_list) + '\n')
+    #if rank == 0 and show_predictions:
+    #    with open("predictions.txt", 'w') as f:
+    #        for i in range(len(pred_dict)):
+    #            prediction = pred_dict[i][0]['caption']
+    #            ground_truth_list = [gts_dict[i][j]['caption'] for j in range(len(gts_dict[i]))]
+    #            f.write(str(i) + '----------------------------------------------------------------------' + '\n')
+    #            f.write('Pred: ' + str(prediction) + '\n')
+    #            f.write('Gt: ' + str(ground_truth_list) + '\n')
 
     print("[GPU: " + str(rank) + " ] Closing...")
     dist.destroy_process_group()

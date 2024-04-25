@@ -170,16 +170,16 @@ def train(rank,
                                         dataset_split=CustomDataset.ValidationSet_ID,
                                         rank=rank, verbose=True)
 
-            if rank == 0:
-                print("Evaluation on Validation Set")
-            evaluate_model_on_set(ddp_model, custom_dataset.caption_idx2word_list,
-                                  custom_dataset.get_sos_token_idx(), custom_dataset.get_eos_token_idx(),
-                                  custom_dataset.val_num_images, data_loader,
-                                  CustomDataset.ValidationSet_ID, max_len,
-                                  rank, ddp_sync_port,
-                                  parallel_batches=train_args.eval_parallel_batch_size,
-                                  use_images_instead_of_features=train_args.is_end_to_end,
-                                  beam_sizes=train_args.eval_beam_sizes)
+            # if rank == 0:
+            #    print("Evaluation on Validation Set")
+            #evaluate_model_on_set(ddp_model, custom_dataset.caption_idx2word_list,
+            #                      custom_dataset.get_sos_token_idx(), custom_dataset.get_eos_token_idx(),
+            #                      custom_dataset.val_num_images, data_loader,
+            #                      CustomDataset.ValidationSet_ID, max_len,
+            #                      rank, ddp_sync_port,
+            #                      parallel_batches=train_args.eval_parallel_batch_size,
+            #                      use_images_instead_of_features=train_args.is_end_to_end,
+            #                      beam_sizes=train_args.eval_beam_sizes)
             time_to_save = True
 
 
